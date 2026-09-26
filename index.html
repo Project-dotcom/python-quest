@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Petualangan Python</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF3FF; --floor:#FBF3FF; --wall:#E3D2FA; --wall2:#D6BEF3; --dot:#C9AEEA;
+  --candy:#FFD166; --candy2:#FFB84D; --pink:#FF8FAE; --pink-dark:#E8628A;
+  --ghost:#8A7CFF; --ghost-dark:#6656D6;
+  --mint:#4FC9A5; --coral:#FF7A85; --text:#4B3868; --muted:#A090BE;
+  --font-cute:'Baloo 2',cursive; --font-body:'Quicksand',sans-serif; --font-code:'JetBrains Mono',monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#2A2140; --floor:#2A2140; } }
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);overscroll-behavior:none;}
+.wrap{max-width:760px;margin:0 auto;padding:22px 16px 40px;}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
+.logo{font-family:var(--font-cute);font-size:19px;font-weight:700;color:var(--pink-dark);}
+.hud{display:flex;gap:8px;align-items:center;}
+.score,.timer{font-family:var(--font-cute);font-size:15px;font-weight:700;color:var(--text);
+  background:#fff;border-radius:99px;padding:5px 14px;box-shadow:0 3px 0 var(--wall2);}
+.timer{color:var(--ghost-dark);display:none;}
+.startScreen{display:flex;justify-content:center;padding:34px 10px;
+  background-image:radial-gradient(var(--dot) 1.5px,transparent 1.5px);background-size:22px 22px;background-position:-4px -4px;}
+.startCard{max-width:420px;width:100%;text-align:center;}
+.startTitle{font-family:var(--font-cute);font-weight:700;font-size:17px;color:var(--pink-dark);margin-bottom:26px;
+  background:var(--bg);display:inline-block;padding:2px 10px;}
+.levelList{position:relative;display:flex;flex-direction:column;gap:22px;perspective:600px;padding:6px 4px 4px;}
+.levelList::before{content:'';position:absolute;left:50%;top:4px;bottom:4px;border-left:4px dotted var(--pink);
+  transform:translateX(-50%);z-index:0;}
+.levelBtn{position:relative;z-index:1;font-family:var(--font-cute);font-weight:700;font-size:14px;border:none;cursor:pointer;
+  padding:13px 18px;max-width:80%;width:fit-content;background:var(--pink);color:#fff;box-shadow:0 5px 0 var(--pink-dark);
+  display:flex;align-items:center;gap:10px;text-align:left;transform-style:preserve-3d;will-change:transform;
+  border-radius:26px 26px 26px 6px;}
+.levelBtn:nth-of-type(odd){align-self:flex-start;border-radius:26px 26px 6px 26px;}
+.levelBtn:nth-of-type(even){align-self:flex-end;border-radius:26px 26px 26px 6px;}
+.levelBtn.back{align-self:center;background:#fff;color:var(--muted);box-shadow:0 4px 0 var(--wall2);
+  border-radius:999px;margin-top:6px;}
+.badge3d{width:28px;height:28px;flex:0 0 auto;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-cute);font-weight:800;font-size:12.5px;color:#fff;
+  background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.7),var(--bc) 62%);
+  box-shadow:0 2px 3px rgba(0,0,0,.25),inset -2px -2px 3px rgba(0,0,0,.28),inset 2px 2px 3px rgba(255,255,255,.45);}
+.pacHero{width:70px;height:70px;margin:0 auto 16px;cursor:pointer;}
+.pacHero .pacBody{width:100%;height:100%;}
+.menuBtn{font-family:var(--font-cute);font-weight:700;font-size:12px;border:none;cursor:pointer;
+  padding:7px 14px;border-radius:99px;background:#fff;color:var(--muted);box-shadow:0 3px 0 var(--wall2);}
+.quizOpts{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.quizOpts button{font-family:var(--font-body);font-weight:600;font-size:13.5px;text-align:left;cursor:pointer;
+  border:2px solid var(--wall);background:#F6EEFC;color:var(--text);border-radius:14px;padding:10px 14px;}
+.quizOpts button.correct{background:var(--mint);color:#fff;border-color:var(--mint);}
+.quizOpts button.wrong{background:var(--coral);color:#fff;border-color:var(--coral);}
+.quizMsg{font-family:var(--font-cute);font-size:13px;font-weight:700;min-height:16px;margin-bottom:10px;}
+.quizMsg.ok{color:var(--mint);} .quizMsg.bad{color:var(--coral);}
+
+.maze{position:relative;display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(9,1fr);
+  aspect-ratio:13/9;background:var(--floor);border-radius:22px;border:3px solid var(--wall2);overflow:hidden;
+  gap:2px;box-shadow:0 8px 0 var(--wall2),0 10px 20px rgba(75,56,104,.15);}
+.cell{position:relative;}
+.cell.wall{background:var(--wall);border-radius:7px;}
+.cell.path.dot::before{content:'';position:absolute;top:50%;left:50%;width:18%;height:18%;min-width:3px;min-height:3px;
+  background:var(--dot);border-radius:50%;transform:translate(-50%,-50%);}
+.cell.mission .marker{position:absolute;top:20%;left:20%;width:60%;height:60%;border-radius:38%;
+  background:linear-gradient(155deg,var(--candy),var(--candy2));animation:pulse 1.3s ease-in-out infinite;
+  box-shadow:0 2px 5px rgba(75,56,104,.25);}
+.cell.mission .marker::after{content:'';position:absolute;top:14%;left:18%;width:34%;height:20%;
+  background:rgba(255,255,255,.55);border-radius:50%;transform:rotate(-20deg);}
+.cell.mission.cleared .marker{background:#EAE0F7;animation:none;box-shadow:none;}
+.cell.mission.cleared .marker::after{display:none;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(.82);}}
+@keyframes bump{0%{transform:scale(1);}45%{transform:scale(1.35);}100%{transform:scale(1);}}
+.bump{animation:bump .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}
+  60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+.shake{animation:shake .4s ease;}
+.confetti{position:fixed;top:-16px;width:9px;height:13px;border-radius:3px;z-index:70;pointer-events:none;
+  animation:confettiFall linear forwards;}
+@keyframes confettiFall{to{transform:translateY(110vh) rotate(600deg);opacity:.85;}}
+
+.player,.enemy{position:absolute;width:6.6%;aspect-ratio:1;
+  transition:left .16s linear,top .16s linear,transform .16s linear;z-index:5;}
+.enemy{transition:left .3s linear,top .3s linear;z-index:4;}
+.pacBody{width:100%;height:100%;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 35% 28%,#FFF6D6,var(--candy) 55%,var(--candy2) 100%);
+  box-shadow:0 3px 6px rgba(75,56,104,.3),inset -3px -3px 5px rgba(0,0,0,.15),inset 2px 2px 4px rgba(255,255,255,.6);
+  animation:chomp .32s ease-in-out infinite;}
+.pacBody::after{content:'';position:absolute;top:20%;left:50%;width:12%;height:12%;background:var(--text);border-radius:50%;}
+@keyframes chomp{
+  0%,100%{clip-path:polygon(100% 50%,100% 50%,100% 50%,100% 0%,0% 0%,0% 100%,100% 100%);}
+  50%{clip-path:polygon(100% 80%,38% 50%,100% 20%,100% 0%,0% 0%,0% 100%,100% 100%);}
+}
+.ghostBody{position:absolute;inset:0;border-radius:50% 50% 8% 8%/60% 60% 8% 8%;
+  background:linear-gradient(160deg,var(--ghost),var(--ghost-dark));
+  box-shadow:0 3px 6px rgba(75,56,104,.35),inset -3px -3px 5px rgba(0,0,0,.18),inset 2px 2px 4px rgba(255,255,255,.35);
+  animation:floatGhost 1s ease-in-out infinite;}
+.ghostBody::after{content:'';position:absolute;left:0;right:0;bottom:-12%;height:24%;background:inherit;
+  clip-path:polygon(0% 0%,0% 55%,12.5% 100%,25% 50%,37.5% 100%,50% 50%,62.5% 100%,75% 50%,87.5% 100%,100% 55%,100% 0%);}
+@keyframes floatGhost{0%,100%{transform:translateY(0);}50%{transform:translateY(-10%);}}
+.enemy .eye{position:absolute;top:30%;width:22%;height:22%;background:#fff;border-radius:50%;}
+.enemy .eye::after{content:'';position:absolute;top:26%;left:26%;width:46%;height:46%;background:var(--text);border-radius:50%;}
+.enemy .eye.l{left:16%;} .enemy .eye.r{right:16%;}
+
+.dpad{display:grid;grid-template-columns:50px 50px 50px;grid-template-rows:50px 50px 50px;gap:6px;
+  justify-content:center;margin:22px auto 0;perspective:500px;}
+.dpad button{background:#fff;border:none;color:var(--pink-dark);border-radius:14px;font-size:15px;cursor:pointer;
+  box-shadow:0 3px 0 var(--wall2);transform-style:preserve-3d;will-change:transform;}
+.dpad .up{grid-column:2;grid-row:1;} .dpad .left{grid-column:1;grid-row:2;}
+.dpad .right{grid-column:3;grid-row:2;} .dpad .down{grid-column:2;grid-row:3;}
+
+.flash{position:fixed;top:16px;left:50%;transform:translate(-50%,-140%);background:#fff;color:var(--text);
+  font-family:var(--font-cute);font-weight:700;font-size:13px;padding:10px 20px;border-radius:99px;
+  box-shadow:0 4px 0 var(--wall2);transition:transform .35s ease;z-index:60;text-align:center;}
+.flash.show{transform:translate(-50%,0);}
+
+.overlay{position:fixed;inset:0;background:rgba(75,56,104,.55);display:flex;align-items:center;justify-content:center;
+  padding:18px;z-index:50;}
+.overlay.hidden{display:none;}
+.panel{background:#fff;border-radius:34px 34px 34px 8px;padding:28px 24px;max-width:480px;width:100%;
+  max-height:88vh;overflow-y:auto;position:relative;box-shadow:0 12px 0 var(--wall2);}
+.lesson{font-size:15px;line-height:1.7;color:var(--text);margin-bottom:14px;font-weight:500;}
+.lesson b{color:var(--pink-dark);font-weight:700;}
+pre{background:#2A2140;border-radius:14px;padding:13px 16px;font-size:12.5px;font-family:var(--font-code);
+  line-height:1.6;color:#D9C9F0;margin:0 0 16px;overflow-x:auto;white-space:pre-wrap;}
+pre .kw{color:#FFD166;} pre .fn{color:#8FD9F5;} pre .str{color:#7EE8C4;}
+.task{font-size:14px;margin-bottom:10px;line-height:1.6;font-weight:600;color:var(--text);}
+.hidden{display:none !important;}
+.noteBox{background:var(--floor);border-left:4px solid var(--mint);border-radius:10px;
+  padding:10px 12px;font-size:13.5px;line-height:1.6;color:var(--text);margin-bottom:12px;}
+.noteBox b{color:var(--pink-dark);}
+.hintBtn{font-family:var(--font-cute);font-size:12.5px;font-weight:700;border:none;cursor:pointer;
+  background:none;color:var(--pink-dark);text-decoration:underline;padding:0 0 10px;}
+.hintBox{background:#FFF7E0;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.6;
+  color:var(--text);margin:-2px 0 12px;}
+.outputBox{background:#241B33;color:#B6F5C9;font-family:'Courier New',monospace;font-size:12.5px;
+  line-height:1.6;border-radius:10px;padding:10px 12px;margin:8px 0 0;white-space:pre-wrap;
+  word-break:break-word;max-height:140px;overflow-y:auto;}
+.task ol{margin:6px 0 8px;padding-left:20px;}
+.task li{margin-bottom:5px;font-weight:500;}
+.task code{font-family:var(--font-code);background:#F6EEFC;color:var(--pink-dark);border-radius:6px;
+  padding:1px 6px;font-size:12.5px;font-weight:600;}
+textarea{width:100%;min-height:110px;background:#F6EEFC;border:2px solid var(--wall);color:var(--text);
+  font-family:var(--font-code);font-size:13px;line-height:1.6;border-radius:14px;padding:12px 14px;resize:vertical;}
+textarea:focus{outline:none;border-color:var(--pink);}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap;}
+button.run{background:var(--pink);color:#fff;border:none;font-family:var(--font-cute);font-weight:700;font-size:14px;
+  padding:11px 20px;border-radius:99px;cursor:pointer;box-shadow:0 3px 0 var(--pink-dark);}
+button.run:active{box-shadow:0 1px 0 var(--pink-dark);transform:translateY(2px);}
+button.run:disabled{opacity:.55;cursor:default;}
+.status{font-family:var(--font-cute);font-size:13.5px;min-height:16px;font-weight:600;}
+.status.ok{color:var(--mint);} .status.bad{color:var(--coral);}
+.closeX{position:absolute;top:14px;right:18px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+
+.finale .big{font-family:var(--font-cute);font-size:22px;color:var(--pink-dark);margin-bottom:8px;text-align:center;font-weight:700;}
+.finale .sc{font-family:var(--font-cute);font-size:14px;text-align:center;margin-bottom:20px;color:var(--text);}
+.finale button{display:block;margin:0 auto;background:var(--mint);color:#fff;border:none;font-family:var(--font-cute);
+  font-weight:700;padding:11px 22px;border-radius:99px;cursor:pointer;box-shadow:0 3px 0 #2f9d7e;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Petualangan Python</div>
+    <div class="hud" id="hud" style="display:none">
+      <button class="menuBtn" id="menuBtn" style="display:none">Ganti Level</button>
+      <div class="timer" id="timer">2:00</div><div class="score" id="score">0/7</div>
+    </div>
+  </header>
+  <div class="startScreen" id="startScreen">
+    <div class="startCard">
+      <div class="pacHero" id="pacHero" title="Coba klik aku!"><div class="pacBody"></div></div>
+      <div class="startTitle" id="startTitle">Pilih level buat mulai petualangan!</div>
+      <div class="levelList" id="levelList"></div>
+    </div>
+  </div>
+  <div class="game" id="game" style="display:none">
+    <div class="maze" id="maze"></div>
+    <div class="dpad">
+      <button class="up" data-dr="-1" data-dc="0">&#9650;</button>
+      <button class="left" data-dr="0" data-dc="-1">&#9664;</button>
+      <button class="right" data-dr="0" data-dc="1">&#9654;</button>
+      <button class="down" data-dr="1" data-dc="0">&#9660;</button>
+    </div>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+<div class="overlay hidden" id="overlay"><div class="panel" id="panel"></div></div>
+
+<script>
+const ROWS=9, COLS=13;
+const PILLARS=[[2,3],[2,7],[2,10],[4,2],[4,5],[4,9],[6,3],[6,7],[6,10]];
+const START=[4,1];
+
+const missionsL1=[
+{pos:[1,2],
+  lesson:`Karaktermu baru bangun dan mau nyapa teman-teman dulu. <b>print()</b> itu caranya ngomong ke layar. Apa yang ditulis di dalam tanda kutip, itu juga yang muncul.`,
+  code:`<span class="fn">print</span>(<span class="str">"Halo"</span>)`,
+  variants:{
+    easy:{task:`Tulis kode yang mencetak sapaan bebas dari karaktermu. Boleh banget pakai namamu sendiri, contoh: print("Halo, aku Dewi!")`,
+      hint:`Pola: print("tulisan bebas") — jangan lupa tanda kutip di kiri-kanan tulisannya.`,
+      checks:[/print\(\s*(["']).{2,}\1\s*\)/],
+      quiz:{q:'Apa output dari kode print("Halo")?',options:['Halo','"Halo"','print','Tidak ada output'],answer:0}},
+    medium:{task:`Cetak 2 baris: baris pertama sapaan, baris kedua ajakan main. Keduanya pakai print() dengan teks bebas.`,
+      hint:`Panggil print() dua kali, masing-masing dengan teks berbeda di dalam tanda kutip.`,
+      note:`Kamu bisa memanggil print() lebih dari sekali dalam satu kode — tiap panggilan jadi baris baru di layar.`,
+      custom:(code)=>{const m=code.match(/print\(\s*(["']).{2,}?\1\s*\)/g);return !!m&&m.length>=2;},
+      quiz:{q:'Apa output dari: print("Hai") lalu print("Ayo main")?',options:['Hai lalu Ayo main (dua baris)','HaiAyo main','Hanya Hai','Error'],answer:0}},
+    hard:{task:`Buat variabel nama (teks bebas), lalu cetak sapaan gabungan pakai +. Contoh: nama = "Rani" lalu print("Halo, " + nama)`,
+      hint:`Pola: nama = "..." lalu print("Halo, " + nama) — tanda + buat menyambung teks dan variabel.`,
+      note:`Kalau digabung pakai +, semua bagian yang digabung harus berupa teks (string), termasuk variabelnya.`,
+      custom:(code)=>{return /nama\s*=\s*(["']).+?\1/.test(code)&&/print\(\s*(["']).*\1\s*\+\s*nama\s*\)/.test(code);},
+      quiz:{q:'Apa hasil dari: nama = "Budi" lalu print("Halo, " + nama)?',options:['Halo, Budi','Halo, nama','Error','Halo, + nama'],answer:0}}}},
+{pos:[1,10],
+  lesson:`Sebelum main bareng, karaktermu mau kenalan dulu. <b>input()</b> bikin program berhenti sebentar sambil nunggu kamu ngetik. Hasilnya selalu berupa teks.`,
+  code:`pemain = <span class="fn">input</span>(<span class="str">"Nama: "</span>)`,
+  variants:{
+    easy:{task:`Buat variabel bernama pemain yang menanyakan nama pemain. Tulis pertanyaannya sesukamu, contoh: "Siapa namamu?"`,
+      hint:`Pola: pemain = input("pertanyaanmu").`,
+      checks:[/pemain\s*=\s*input\(\s*(["']).+?\1\s*\)/],
+      quiz:{q:"Apa tipe data hasil dari input(), walaupun kamu mengetik angka?",options:["Teks (string)","Angka bulat (integer)","Angka desimal (float)","Benar/salah (boolean)"],answer:0}},
+    medium:{task:`Minta 2 hal pakai input(): nama dan warna favorit, simpan ke 2 variabel berbeda (bebas namanya).`,
+      hint:`Pakai input() dua kali, contoh: nama = input(...) dan warna = input(...).`,
+      note:`Setiap kali input() dipanggil, program berhenti sebentar menunggu ketikanmu, baru lanjut ke baris berikutnya.`,
+      custom:(code)=>{const c=(code.match(/=\s*input\(/g)||[]).length;return c>=2;},
+      quiz:{q:"Kalau kamu pakai input() dua kali, apa yang terjadi?",options:["Program berhenti dua kali menunggu ketikan","Program cuma berhenti sekali","Error","Otomatis keduanya sama"],answer:0}},
+    hard:{task:`umur = input("Umur: "), lalu ubah jadi angka: umur_angka = int(umur), lalu print(umur_angka + 1).`,
+      hint:`Pola: umur = input("...") lalu umur_angka = int(umur) lalu print(umur_angka + 1).`,
+      note:`input() selalu menghasilkan teks, jadi kalau mau dihitung sebagai angka, harus diubah dulu pakai int().`,
+      custom:(code)=>{return /umur\s*=\s*input\(/.test(code)&&/umur_angka\s*=\s*int\(\s*umur\s*\)/.test(code)&&/print\(\s*umur_angka\s*\+\s*1\s*\)/.test(code);},
+      quiz:{q:"Kenapa hasil input() harus diubah pakai int() dulu sebelum dijumlahkan?",options:["Karena input() selalu berupa teks, bukan angka","Karena angka otomatis dari input()","Supaya lebih cepat","Tidak perlu diubah"],answer:0}}}},
+{pos:[3,6],
+  lesson:`Karaktermu lagi kumpulin poin sepanjang jalan. Variabel itu kayak wadah buat nyimpen nilai, dan nilainya bisa diubah kapan aja.`,
+  code:`poin = <span class="kw">10</span>\npoin = poin + <span class="kw">1</span>`,
+  variants:{
+    easy:{task:`Langkah:<ol><li>poin = angka awal bebas</li><li>poin = poin + 15</li><li>print(poin)</li></ol>Contoh: <code>poin = 20</code>`,
+      hint:`poin = angka, lalu poin = poin + 15, lalu print(poin).`,
+      checks:[/poin\s*=\s*\d+\b/,/poin\s*=\s*poin\s*\+\s*15|poin\s*\+=\s*15/,/print\(\s*poin\s*\)/],
+      quiz:{q:"Berapa nilai poin setelah: poin = 10, lalu poin = poin + 1?",options:["11","10","1","Error"],answer:0}},
+    medium:{task:`Langkah: poin = angka awal bebas, lalu pakai <code>poin += 20</code> (bukan poin = poin + 20), lalu print(poin).`,
+      hint:`Ingat: poin += 20 artinya sama dengan poin = poin + 20.`,
+      note:`Operator += adalah jalan pintas untuk menambah nilai variabel tanpa menulis nama variabelnya dua kali.`,
+      custom:(code)=>{return /poin\s*=\s*\d+\b/.test(code)&&/poin\s*\+=\s*20\b/.test(code)&&/print\(\s*poin\s*\)/.test(code);},
+      quiz:{q:"Apa arti dari poin += 20?",options:["Sama dengan poin = poin + 20","Sama dengan poin = 20","Mengurangi poin 20","Error"],answer:0}},
+    hard:{task:`Buat dua variabel: poin dan bonus (angka bebas), lalu total = poin + bonus, lalu print(total).`,
+      hint:`Buat dua variabel angka (poin, bonus), lalu total = poin + bonus, lalu print(total).`,
+      note:`Kamu bisa menjumlahkan dua variabel angka langsung, hasilnya disimpan ke variabel baru.`,
+      custom:(code)=>{return /poin\s*=\s*\d+\b/.test(code)&&/bonus\s*=\s*\d+\b/.test(code)&&/total\s*=\s*poin\s*\+\s*bonus/.test(code)&&/print\(\s*total\s*\)/.test(code);},
+      quiz:{q:"Jika poin = 10 dan bonus = 5, berapa nilai total = poin + bonus?",options:["15","10","5","Error"],answer:0}}}},
+{pos:[5,2],
+  lesson:`Setiap karakter game punya datanya sendiri, mulai dari angka bulat, angka desimal, teks, sampai benar atau salah. <b>type()</b> nunjukin jenis datanya apa.`,
+  code:`<span class="fn">print</span>(<span class="fn">type</span>(<span class="kw">3.14</span>))`,
+  variants:{
+    easy:{task:`Langkah:<ol><li>level = angka bulat bebas, contoh: <code>level = 3</code></li><li>kecepatan = angka desimal bebas, contoh: <code>kecepatan = 7.5</code></li><li>julukan = "julukanmu"</li><li>print(type(kecepatan))</li></ol>`,
+      hint:`kecepatan harus angka desimal (pakai titik), contoh: kecepatan = 7.5.`,
+      checks:[/level\s*=\s*\d+\b/,/kecepatan\s*=\s*\d+\.\d+/,/julukan\s*=\s*(["'])[^"']+\1/,/print\(\s*type\(\s*kecepatan\s*\)\s*\)/],
+      quiz:{q:"Apa output dari print(type(3.14))?",options:["<class 'float'>","<class 'int'>","<class 'str'>","3.14"],answer:0}},
+    medium:{task:`Tambahkan variabel aktif = True atau False (boolean), lalu print(type(aktif)).`,
+      hint:`aktif = True atau aktif = False (huruf besar di awal, tanpa tanda kutip).`,
+      note:`Selain angka dan teks, Python juga punya tipe data boolean yang isinya cuma True atau False.`,
+      custom:(code)=>{return /aktif\s*=\s*(True|False)\b/.test(code)&&/print\(\s*type\(\s*aktif\s*\)\s*\)/.test(code);},
+      quiz:{q:"Apa output dari print(type(True))?",options:["<class 'bool'>","<class 'int'>","<class 'str'>","True"],answer:0}},
+    hard:{task:`Cetak type() dari hasil operasi campuran: print(type(3 + 2.0)) — coba tebak dulu sebelum jalanin!`,
+      hint:`3 + 2.0 hasilnya angka desimal, makanya type()-nya float.`,
+      note:`Kalau angka bulat dan desimal dijumlahkan, Python otomatis mengubah hasilnya jadi desimal (float).`,
+      checks:[/print\(\s*type\(\s*3\s*\+\s*2\.0\s*\)\s*\)/],
+      quiz:{q:"Apa hasil dari print(type(3 + 2.0))?",options:["<class 'float'>","<class 'int'>","<class 'str'>","Error"],answer:0}}}},
+{pos:[5,10],
+  lesson:`Karaktermu nemu sekantong permen dan mau bagi rata. Operator <b>%</b> ngasih tahu sisanya, <b>//</b> ngasih tahu berapa yang kebagian ke tiap orang.`,
+  code:`<span class="fn">print</span>(<span class="kw">10</span> % <span class="kw">3</span>)`,
+  variants:{
+    easy:{task:`Langkah (langsung pakai angka):<ol><li>sisa = angka_permen % angka_teman</li><li>bagian = angka_permen // angka_teman (angkanya sama dengan langkah 1)</li><li>print(sisa, bagian)</li></ol>Contoh: <code>sisa = 17 % 5</code>, <code>bagian = 17 // 5</code>`,
+      hint:`sisa pakai %, bagian pakai // — pakai angka yang sama persis di keduanya.`,
+      custom:(code)=>{const a=code.match(/sisa\s*=\s*(\d+)\s*%\s*(\d+)/);const b=code.match(/bagian\s*=\s*(\d+)\s*\/\/\s*(\d+)/);return !!(a&&b&&a[1]===b[1]&&a[2]===b[2]&&+a[2]>0);},
+      checks:[/print\(\s*sisa\s*,\s*bagian\s*\)/],
+      quiz:{q:"Apa output dari print(10 % 3)?",options:["1","3","0","10"],answer:0}},
+    medium:{task:`Hitung sisa dan bagian seperti biasa, tapi cetak pakai f-string: print(f"Sisa: {sisa}, Bagian: {bagian}")`,
+      hint:`f-string: f"Sisa: {sisa}, Bagian: {bagian}" — huruf f di depan tanda kutip.`,
+      note:`f-string memudahkan menggabungkan teks dan nilai variabel tanpa pakai tanda +.`,
+      custom:(code)=>{const a=code.match(/sisa\s*=\s*(\d+)\s*%\s*(\d+)/);const b=code.match(/bagian\s*=\s*(\d+)\s*\/\/\s*(\d+)/);const f=/print\(\s*f(["']).*\1\s*\)/.test(code);return !!(a&&b&&a[1]===b[1]&&a[2]===b[2]&&+a[2]>0&&f);},
+      quiz:{q:'Apa fungsi f di depan string seperti f"Sisa: {sisa}"?',options:["Supaya nilai variabel bisa langsung dimasukkan ke teks","Supaya teks jadi angka","Supaya program lebih cepat","Tidak ada fungsinya"],answer:0}},
+    hard:{task:`Setelah hitung sisa, tambahkan: if sisa == 0: print(pesan rata) else: print(pesan sisa).`,
+      hint:`if sisa == 0: (satu print) lalu else: (print lain).`,
+      note:`if/else membuat program mencetak pesan berbeda tergantung hasil perhitungan sebelumnya.`,
+      custom:(code)=>{const a=code.match(/sisa\s*=\s*(\d+)\s*%\s*(\d+)/);const hasIf=/if\s+sisa\s*==\s*0\s*:/.test(code);const hasElse=/else\s*:/.test(code);const pc=(code.match(/print\(/g)||[]).length;return !!(a&&hasIf&&hasElse&&pc>=2);},
+      quiz:{q:"Jika sisa = 0, apa hasil dari kondisi if sisa == 0?",options:["True, jadi masuk ke blok if","False","Error","Tidak terdefinisi"],answer:0}}}},
+{pos:[7,4],
+  lesson:`Karaktermu jajan di kantin dan penasaran berapa kembaliannya. Gabungin variabel dan operator buat cari tahu.`,
+  code:`kembalian = uang - harga`,
+  variants:{
+    easy:{task:`Langkah (wajib pakai nama variabel ini):<ol><li>uang = angka uang yang kamu bawa</li><li>harga = angka harga jajanan (lebih kecil dari uang)</li><li>kembalian = uang - harga</li><li>print(kembalian)</li></ol>Contoh: <code>uang = 90000</code>, <code>harga = 1000</code>`,
+      hint:`uang = angka, harga = angka (lebih kecil), kembalian = uang - harga, print(kembalian).`,
+      custom:(code)=>{const u=code.match(/uang\s*=\s*(\d+)\b/);const h=code.match(/harga\s*=\s*(\d+)\b/);return !!(u&&h&&+u[1]>+h[1]);},
+      checks:[/kembalian\s*=\s*uang\s*-\s*harga/,/print\(\s*kembalian\s*\)/],
+      quiz:{q:"Jika uang = 10000 dan harga = 4000, berapa kembalian?",options:["6000","4000","14000","10000"],answer:0}},
+    medium:{task:`uang dan harga didapat dari input(), diubah ke angka pakai int(), baru hitung kembaliannya.`,
+      hint:`Pola: uang = int(input("...")) dan harga = int(input("...")), baru kembalian = uang - harga, print(kembalian).`,
+      note:`Kamu bisa gabungkan int() dan input() sekaligus dalam satu baris kode.`,
+      custom:(code)=>{return /uang\s*=\s*int\(\s*input\(/.test(code)&&/harga\s*=\s*int\(\s*input\(/.test(code)&&/kembalian\s*=\s*uang\s*-\s*harga/.test(code)&&/print\(\s*kembalian\s*\)/.test(code);},
+      quiz:{q:"Kenapa perlu int(input(...)) di sini?",options:["Karena input() berupa teks, harus jadi angka dulu buat dikurangi","Karena harus dua kali input","Karena harga selalu 0","Tidak perlu"],answer:0}},
+    hard:{task:`Tambahkan pengecekan: if harga > uang: print(pesan uang kurang) else: kembalian = uang-harga lalu print(kembalian).`,
+      hint:`if harga > uang: (pesan error) else: (hitung kembalian & print).`,
+      note:`Mengecek kondisi dulu sebelum menghitung mencegah hasil yang aneh, seperti kembalian minus.`,
+      custom:(code)=>{const u=code.match(/uang\s*=\s*(\d+)\b/);const h=code.match(/harga\s*=\s*(\d+)\b/);const hasIf=/if\s+harga\s*>\s*uang\s*:/.test(code);const hasElse=/else\s*:/.test(code);return !!(u&&h&&+u[1]>+h[1]&&hasIf&&hasElse&&/kembalian\s*=\s*uang\s*-\s*harga/.test(code));},
+      quiz:{q:"Kenapa perlu if harga > uang sebelum menghitung kembalian?",options:["Supaya tidak menghasilkan kembalian negatif saat uang kurang","Supaya lebih cepat","Karena wajib ada else","Tidak ada alasannya"],answer:0}}}},
+{pos:[7,9],
+  lesson:`Karaktermu lagi nabung buat beli mainan impian. Operator perbandingan (>=, <=, ==) hasilnya cuma dua: benar atau salah.`,
+  code:`cukup = tabungan >= harga_mainan`,
+  variants:{
+    easy:{task:`Langkah (wajib pakai nama variabel ini):<ol><li>tabungan = angka tabunganmu</li><li>harga_mainan = angka harga mainan impian</li><li>cukup = tabungan >= harga_mainan</li><li>print(cukup)</li></ol>Contoh: <code>tabungan = 5000</code>, <code>harga_mainan = 7000</code>`,
+      hint:`cukup = tabungan >= harga_mainan, lalu print(cukup).`,
+      checks:[/tabungan\s*=\s*\d+\b/,/harga_mainan\s*=\s*\d+\b/,/cukup\s*=\s*tabungan\s*>=\s*harga_mainan/,/print\(\s*cukup\s*\)/],
+      quiz:{q:"Jika tabungan = 5000 dan harga_mainan = 7000, apa hasil dari tabungan >= harga_mainan?",options:["False","True","5000","7000"],answer:0}},
+    medium:{task:`Tambahkan satu perbandingan lagi: kurang = tabungan < harga_mainan, lalu print(cukup, kurang).`,
+      hint:`Tambahkan kurang = tabungan < harga_mainan, lalu print(cukup, kurang) — dua nilai dipisah koma.`,
+      note:`Kamu bisa membuat lebih dari satu variabel hasil perbandingan dari data yang sama.`,
+      custom:(code)=>{return /tabungan\s*=\s*\d+\b/.test(code)&&/harga_mainan\s*=\s*\d+\b/.test(code)&&/cukup\s*=\s*tabungan\s*>=\s*harga_mainan/.test(code)&&/kurang\s*=\s*tabungan\s*<\s*harga_mainan/.test(code)&&/print\(\s*cukup\s*,\s*kurang\s*\)/.test(code);},
+      quiz:{q:"Jika tabungan=5000, harga_mainan=7000, apa nilai kurang = tabungan < harga_mainan?",options:["True","False","5000","Error"],answer:0}},
+    hard:{task:`Gabungkan dua syarat pakai and: boleh_beli = (tabungan >= harga_mainan) and (umur >= 7). Tentukan umur bebas.`,
+      hint:`boleh_beli = (tabungan >= harga_mainan) and (umur >= 7) — dua syarat harus benar semua.`,
+      note:`Operator and dipakai kalau sebuah aksi butuh dua syarat terpenuhi sekaligus, bukan cuma satu.`,
+      custom:(code)=>{return /umur\s*=\s*\d+\b/.test(code)&&/boleh_beli\s*=\s*\(?\s*tabungan\s*>=\s*harga_mainan\s*\)?\s*and\s*\(?\s*umur\s*>=\s*7\s*\)?/.test(code)&&/print\(\s*boleh_beli\s*\)/.test(code);},
+      quiz:{q:"Operator and menghasilkan True kalau...",options:["Kedua syaratnya benar semua","Salah satu syarat benar","Semua syarat salah","Tidak pernah True"],answer:0}}}}
+];
+
+const missionsL2=[
+{pos:[1,2],
+  lesson:`Ada penjaga yang mulai muter-muter di petamu. Program juga bisa milih jalan sesuai kondisi pakai <b>if</b> dan <b>else</b>, kayak ngecek jam buat nentuin waktunya tidur atau belum.`,
+  code:`if jam >= 21:\n    print("Waktunya tidur")\nelse:\n    print("Masih boleh main")`,
+  variants:{
+    easy:{task:`Langkah:<ol><li>jam = angka bebas (0-23)</li><li>if jam >= 21: lalu print(pesan waktu tidur)</li><li>else: lalu print(pesan masih boleh main)</li></ol>`,
+      hint:`if jam >= 21: (baris di bawahnya menjorok), lalu else: (baris di bawahnya lagi menjorok).`,
+      custom:(code)=>{const hasJam=/jam\s*=\s*\d+/.test(code);const hasIf=/if\s+jam\s*>=\s*21\s*:/.test(code);const hasElse=/else\s*:/.test(code);const pc=(code.match(/print\(/g)||[]).length;return hasJam&&hasIf&&hasElse&&pc>=2;},
+      quiz:{q:'Jika jam = 19, apa yang tercetak dari: if jam >= 21: print("Waktunya tidur") else: print("Masih boleh main")?',options:['Masih boleh main','Waktunya tidur','Keduanya','Tidak ada'],answer:0}},
+    medium:{task:`Tambahkan elif: jam >= 21 → tidur, jam >= 17 → waktunya makan malam, selain itu → masih boleh main.`,
+      hint:`Urutannya: if ...: lalu elif jam >= 17: lalu else: — tiga blok berurutan.`,
+      note:`elif dipakai kalau ada lebih dari dua kemungkinan kondisi yang perlu dicek berurutan.`,
+      custom:(code)=>{const hasJam=/jam\s*=\s*\d+/.test(code);const hasIf=/if\s+jam\s*>=\s*21\s*:/.test(code);const hasElif=/elif\s+jam\s*>=\s*17\s*:/.test(code);const hasElse=/else\s*:/.test(code);const pc=(code.match(/print\(/g)||[]).length;return hasJam&&hasIf&&hasElif&&hasElse&&pc>=3;},
+      quiz:{q:"Fungsi elif itu untuk...",options:["Menambah syarat lain di antara if dan else","Mengulang kode","Menghentikan program","Membuat variabel baru"],answer:0}},
+    hard:{task:`Gabungkan dua syarat pakai and: if jam >= 21 and hari == "Jumat": print(pesan khusus) else: print(pesan biasa).`,
+      hint:`if jam >= 21 and hari == "...": — dua syarat digabung pakai and.`,
+      note:`Dua syarat yang digabung and harus benar semua supaya blok if-nya dijalankan.`,
+      custom:(code)=>{return /jam\s*=\s*\d+/.test(code)&&/hari\s*=\s*(["']).+?\1/.test(code)&&/if\s+jam\s*>=\s*21\s+and\s+hari\s*==\s*(["']).+?\1\s*:/.test(code)&&/else\s*:/.test(code);},
+      quiz:{q:"if A and B: baru jalan kalau...",options:["A dan B dua-duanya benar","Salah satu benar","Tidak pernah jalan","A saja cukup"],answer:0}}}},
+{pos:[1,10],
+  lesson:`Perulangan bikin komputer ngerjain hal yang sama berkali-kali tanpa capek nulis ulang, tinggal pakai <b>for</b>.`,
+  code:`for i in range(1, 4):\n    print(i)`,
+  variants:{
+    easy:{task:`Pakai perulangan for buat mencetak angka dari 1 sampai angka pilihanmu sendiri.`,
+      hint:`for i in range(1, angka): lalu baris di bawahnya print(i).`,
+      checks:[/for\s+\w+\s+in\s+range\(/,/print\(/],
+      quiz:{q:"Angka apa saja yang dicetak oleh: for i in range(1, 4): print(i)?",options:["1, 2, 3","1, 2, 3, 4","0, 1, 2","Hanya 4"],answer:0}},
+    medium:{task:`Cetak angka pakai range(mulai, akhir) dengan mulai bukan 1, misalnya range(3, 8).`,
+      hint:`range(mulai, akhir) — angka pertama tidak harus 1, contoh range(3, 8).`,
+      note:`range(mulai, akhir) bisa dimulai dari angka berapa saja, tidak harus dari 1.`,
+      custom:(code)=>{const m=code.match(/range\(\s*(\d+)\s*,\s*(\d+)\s*\)/);return !!(m&&+m[1]>1)&&/print\(/.test(code);},
+      quiz:{q:"Angka apa yang dicetak oleh: for i in range(3, 6): print(i)?",options:["3, 4, 5","3, 4, 5, 6","1, 2, 3","6"],answer:0}},
+    hard:{task:`Cetak hanya angka genap dari 1 sampai 10 pakai for + if di dalamnya (cek i % 2 == 0).`,
+      hint:`Di dalam for, tambahkan if i % 2 == 0: baru print(i) di dalam if itu.`,
+      note:`if di dalam for dijalankan setiap putaran, jadi bisa menyaring angka mana yang mau diproses.`,
+      custom:(code)=>{const hasFor=/for\s+\w+\s+in\s+range\(/.test(code);const hasIf=/if\s+\w+\s*%\s*2\s*==\s*0\s*:/.test(code);return hasFor&&hasIf&&/print\(/.test(code);},
+      quiz:{q:"Kenapa i % 2 == 0 dipakai untuk cek angka genap?",options:["Karena sisa bagi 2 dari angka genap selalu 0","Karena selalu True","Karena i selalu genap","Tidak ada hubungannya"],answer:0}}}},
+{pos:[3,6],
+  lesson:`<b>List</b> itu satu wadah buat nyimpen banyak data sekaligus, dipisah pakai koma.`,
+  code:`belanja = ["roti", "susu"]\nprint(belanja)`,
+  variants:{
+    easy:{task:`Buat list namanya bebas, isi minimal 3 barang favoritmu, lalu cetak listnya.`,
+      hint:`belanja = ["a", "b", "c"] lalu print(belanja).`,
+      custom:(code)=>{const m=code.match(/(\w+)\s*=\s*\[([^\]]*)\]/);if(!m)return false;const items=m[2].split(',').filter(s=>s.trim().length>0);if(items.length<3)return false;return new RegExp('print\\(\\s*'+m[1]+'\\s*\\)').test(code);},
+      quiz:{q:'Apa output dari print(belanja) jika belanja = ["roti", "susu"]?',options:["['roti', 'susu']","roti susu","('roti', 'susu')","Error"],answer:0}},
+    medium:{task:`Buat list minimal 3 barang, tambahkan satu barang baru pakai .append(), baru print listnya lagi.`,
+      hint:`nama_list.append("barang baru") — nama variabelnya harus sama dengan nama listmu.`,
+      note:`.append() adalah salah satu fungsi bawaan list untuk menambah isi tanpa menulis ulang seluruh list.`,
+      custom:(code)=>{const m=code.match(/(\w+)\s*=\s*\[([^\]]*)\]/);if(!m)return false;const items=m[2].split(',').filter(s=>s.trim());if(items.length<3)return false;const hasAppend=new RegExp(m[1]+'\\.append\\(').test(code);return hasAppend&&new RegExp('print\\(\\s*'+m[1]+'\\s*\\)').test(code);},
+      quiz:{q:"Apa fungsi .append() pada list?",options:["Menambahkan item baru ke akhir list","Menghapus item","Mengurutkan list","Menghitung panjang list"],answer:0}},
+    hard:{task:`Buat list minimal 3 barang, lalu cetak barang pertama dan terakhir pakai indeks: print(list[0]) dan print(list[-1]).`,
+      hint:`list[0] itu item pertama, list[-1] itu item terakhir.`,
+      note:`Indeks list dimulai dari 0, dan indeks negatif dihitung dari belakang.`,
+      custom:(code)=>{const m=code.match(/(\w+)\s*=\s*\[([^\]]*)\]/);if(!m)return false;const items=m[2].split(',').filter(s=>s.trim());if(items.length<3)return false;const n=m[1];return new RegExp('print\\(\\s*'+n+'\\[0\\]\\s*\\)').test(code)&&new RegExp('print\\(\\s*'+n+'\\[-1\\]\\s*\\)').test(code);},
+      quiz:{q:"Apa arti indeks -1 pada list?",options:["Item paling terakhir","Item pertama","Item kosong","Error"],answer:0}}}},
+{pos:[7,4],
+  lesson:`Sang penjaga gerbang cuma percaya sama kata sandi yang cocok. Bandingin dua teks pakai <b>==</b>.`,
+  code:`if tebakan == sandi:\n    print("Gerbang terbuka")`,
+  variants:{
+    easy:{task:`Langkah (wajib pakai nama variabel ini):<ol><li>sandi = "kata sandi rahasiamu"</li><li>tebakan = "tebakan bebas"</li><li>if tebakan == sandi: lalu print(pesan gerbang terbuka)</li><li>else: lalu print(pesan lain)</li></ol>`,
+      hint:`if tebakan == sandi: (satu print), else: (print lain).`,
+      custom:(code)=>{const hasSandi=/sandi\s*=/.test(code);const hasTebakan=/tebakan\s*=/.test(code);const hasIf=/if\s+tebakan\s*==\s*sandi\s*:/.test(code);const hasElse=/else\s*:/.test(code);const pc=(code.match(/print\(/g)||[]).length;return hasSandi&&hasTebakan&&hasIf&&hasElse&&pc>=2;},
+      quiz:{q:"Jika sandi = 'abc' dan tebakan = 'abc', apa hasil dari tebakan == sandi?",options:["True","False","'abc'","Error"],answer:0}},
+    medium:{task:`Tambahkan percobaan kedua lewat variabel tebakan2, kalau tebakan pertama salah, cek lagi tebakan2 == sandi.`,
+      hint:`Setelah tebakan pertama, buat tebakan2 = "..." lalu cek lagi tebakan2 == sandi.`,
+      note:`Kamu bisa menaruh if/else lagi di dalam blok else, ini disebut percobaan berlapis.`,
+      custom:(code)=>{return /sandi\s*=/.test(code)&&/tebakan\s*=/.test(code)&&/tebakan2\s*=/.test(code)&&/tebakan2\s*==\s*sandi/.test(code)&&(code.match(/print\(/g)||[]).length>=2;},
+      quiz:{q:"Kenapa perlu variabel tebakan2 di sini?",options:["Supaya pemain punya kesempatan kedua menebak","Supaya sandinya berubah","Karena wajib dua variabel","Tidak ada gunanya"],answer:0}},
+    hard:{task:`Buat pengecekan sandi tidak peka huruf besar/kecil: if tebakan.lower() == sandi.lower():`,
+      hint:`.lower() mengubah teks jadi huruf kecil semua, jadi "ABC".lower() == "abc".`,
+      note:`.lower() berguna supaya perbandingan teks tidak peduli huruf besar atau kecil.`,
+      custom:(code)=>{return /sandi\s*=/.test(code)&&/tebakan\s*=/.test(code)&&/if\s+tebakan\.lower\(\)\s*==\s*sandi\.lower\(\)\s*:/.test(code)&&/else\s*:/.test(code);},
+      quiz:{q:"Apa fungsi .lower() pada teks?",options:["Mengubah semua huruf jadi huruf kecil","Mengubah jadi huruf besar","Menghapus spasi","Membalik teks"],answer:0}}}},
+{pos:[7,9],
+  lesson:`Gabungin list sama perulangan buat ngitung total harga belanjaanmu sekaligus.`,
+  code:`harga = [5000, 3000]\ntotal = 0\nfor h in harga:\n    total = total + h\nprint(total)`,
+  variants:{
+    easy:{task:`Langkah:<ol><li>harga = [angka1, angka2, angka3, ...] (minimal 3 angka)</li><li>total = 0</li><li>for h in harga: lalu total = total + h</li><li>print(total)</li></ol>`,
+      hint:`total = 0, lalu di dalam for: total = total + h, lalu print(total) di luar for.`,
+      custom:(code)=>{const listMatch=code.match(/(\w+)\s*=\s*\[([^\]]*)\]/);if(!listMatch)return false;const items=listMatch[2].split(',').filter(s=>s.trim().length>0);if(items.length<3)return false;const hasFor=/for\s+\w+\s+in\s+/.test(code);const hasPrintTotal=/print\(\s*total\s*\)/.test(code);return hasFor&&hasPrintTotal;},
+      quiz:{q:"Jika harga = [5000, 3000], berapa nilai total setelah loop selesai?",options:["8000","5000","3000","0"],answer:0}},
+    medium:{task:`Selain total, hitung juga rata-rata: rata = total / len(harga), lalu print(rata).`,
+      hint:`rata = total / len(harga) — len() menghitung banyak item di list.`,
+      note:`len() dipakai untuk menghitung jumlah item, berguna kalau mau mencari rata-rata.`,
+      custom:(code)=>{const listMatch=code.match(/(\w+)\s*=\s*\[([^\]]*)\]/);if(!listMatch)return false;const items=listMatch[2].split(',').filter(s=>s.trim());if(items.length<3)return false;const hasFor=/for\s+\w+\s+in\s+/.test(code);const hasRata=/rata\s*=\s*total\s*\/\s*len\(/.test(code);return hasFor&&hasRata&&/print\(\s*rata\s*\)/.test(code);},
+      quiz:{q:"Fungsi len() dipakai untuk...",options:["Menghitung jumlah item dalam list","Menghitung total angka","Mengurutkan list","Menghapus list"],answer:0}},
+    hard:{task:`Hitung total hanya untuk harga di atas 3000 (pakai if di dalam for).`,
+      hint:`Di dalam for, tambahkan if h > 3000: baru total = total + h di dalam if itu.`,
+      note:`Menaruh if di dalam for memungkinkan kamu memilih data mana saja yang mau dihitung.`,
+      custom:(code)=>{const listMatch=code.match(/(\w+)\s*=\s*\[([^\]]*)\]/);if(!listMatch)return false;const hasFor=/for\s+\w+\s+in\s+/.test(code);const hasIf=/if\s+\w+\s*>\s*3000\s*:/.test(code);return hasFor&&hasIf&&/print\(\s*total\s*\)/.test(code);},
+      quiz:{q:"Kenapa perlu if di dalam for pada kasus ini?",options:["Supaya hanya harga tertentu yang ditambahkan ke total","Supaya loop berhenti","Supaya list dihapus","Tidak ada alasan"],answer:0}}}}
+];
+
+function runPy(code){
+  const output=[];
+  const scope={};
+  function pyStr(v){
+    if(v.k==='str') return v.v;
+    if(v.k==='bool') return v.v?'True':'False';
+    if(v.k==='none') return 'None';
+    if(v.k==='num') return v.f? formatFloat(v.v) : String(v.v);
+    if(v.k==='list') return pyRepr(v);
+    return String(v.v);
+  }
+  function formatFloat(n){ return Number.isInteger(n)? n+'.0' : String(n); }
+  function pyRepr(v){
+    if(v.k==='str') return "'"+v.v+"'";
+    if(v.k==='list') return '['+v.v.map(pyRepr).join(', ')+']';
+    return pyStr(v);
+  }
+  function pyType(v){
+    if(v.k==='bool') return "<class 'bool'>";
+    if(v.k==='str') return "<class 'str'>";
+    if(v.k==='list') return "<class 'list'>";
+    if(v.k==='none') return "<class 'NoneType'>";
+    if(v.k==='num') return v.f? "<class 'float'>":"<class 'int'>";
+    return "<class 'object'>";
+  }
+  function truthy(v){
+    if(v.k==='bool') return v.v;
+    if(v.k==='num') return v.v!==0;
+    if(v.k==='str') return v.v.length>0;
+    if(v.k==='list') return v.v.length>0;
+    if(v.k==='none') return false;
+    return !!v.v;
+  }
+  function cmp(v,op,r){
+    const a=v.v,b=r.v; let res;
+    switch(op){case '==':res=a===b;break;case '!=':res=a!==b;break;case '<':res=a<b;break;case '<=':res=a<=b;break;case '>':res=a>b;break;case '>=':res=a>=b;break;}
+    return {k:'bool',v:!!res};
+  }
+  function arith(v,op,r){
+    if(op==='+'){
+      if(v.k==='str'||r.k==='str') return {k:'str', v: pyStr(v)+pyStr(r)};
+      if(v.k==='list'&&r.k==='list') return {k:'list', v: v.v.concat(r.v)};
+      return {k:'num', v: v.v+r.v, f: v.f||r.f};
+    }
+    if(op==='-') return {k:'num', v:v.v-r.v, f:v.f||r.f};
+    if(op==='*'){ if(v.k==='str'&&r.k==='num') return {k:'str', v: v.v.repeat(r.v)}; return {k:'num', v:v.v*r.v, f:v.f||r.f}; }
+    if(op==='/') return {k:'num', v: v.v/r.v, f:true};
+    if(op==='//') return {k:'num', v: Math.floor(v.v/r.v), f: v.f||r.f};
+    if(op==='%') return {k:'num', v: ((v.v%r.v)+r.v)%r.v, f: v.f||r.f};
+  }
+  function indexInto(v, idx){
+    if(v.k==='str'){ let i2=idx.v; if(i2<0) i2+=v.v.length; return {k:'str', v: v.v[i2]}; }
+    const arr=v.v; let i2=idx.v; if(i2<0) i2+=arr.length;
+    return arr[i2]!==undefined? arr[i2] : {k:'none'};
+  }
+  function methodCall(v,name,args){
+    if(name==='append'){ v.v.push(args[0]); return {k:'none'}; }
+    if(name==='lower'){ return {k:'str', v: v.v.toLowerCase()}; }
+    if(name==='upper'){ return {k:'str', v: v.v.toUpperCase()}; }
+    throw new Error("Method ."+name+"() belum didukung di simulator ini.");
+  }
+  function callFn(name,args){
+    if(name==='print'){ output.push(args.map(pyStr).join(' ')); return {k:'none'}; }
+    if(name==='input'){ let val=''; try{ val=window.prompt(args[0]?pyStr(args[0]):'')||''; }catch(e){} return {k:'str', v: String(val)}; }
+    if(name==='int'){ const a=args[0]; const n= a.k==='str'? parseInt(a.v.trim(),10) : Math.trunc(a.v); if(isNaN(n)) throw new Error("ValueError: tidak bisa mengubah jadi angka"); return {k:'num', v:n, f:false}; }
+    if(name==='float'){ const a=args[0]; const n=a.k==='str'?parseFloat(a.v):a.v; return {k:'num', v:n, f:true}; }
+    if(name==='str'){ return {k:'str', v: pyStr(args[0])}; }
+    if(name==='len'){ return {k:'num', v: args[0].v.length, f:false}; }
+    if(name==='type'){ return {k:'str', v: pyType(args[0])}; }
+    throw new Error("Fungsi "+name+"() belum didukung di simulator ini.");
+  }
+  function getVar(name){ if(!(name in scope)) throw new Error("NameError: nama '"+name+"' belum didefinisikan"); return scope[name]; }
+  function evalExpr(s){
+    let i=0;
+    function ws(){ while(i<s.length&&/\s/.test(s[i])) i++; }
+    function consume(re){ ws(); const m=s.slice(i).match(re); if(m&&m.index===0){ i+=m[0].length; return m[0]; } return null; }
+    function parseOr(){ let v=parseAnd(); while(consume(/^or\b/)){ const r=parseAnd(); v={k:'bool',v: truthy(v)||truthy(r)}; } return v; }
+    function parseAnd(){ let v=parseNotE(); while(consume(/^and\b/)){ const r=parseNotE(); v={k:'bool',v: truthy(v)&&truthy(r)}; } return v; }
+    function parseNotE(){ if(consume(/^not\b/)){ const v=parseNotE(); return {k:'bool',v:!truthy(v)}; } return parseCmp(); }
+    function parseCmp(){ let v=parseAdd(); const op=consume(/^(==|!=|<=|>=|<|>)/); if(op){ const r=parseAdd(); v=cmp(v,op,r); } return v; }
+    function parseAdd(){ let v=parseMul(); let op; while(op=consume(/^(\+|-)/)){ const r=parseMul(); v=arith(v,op,r);} return v; }
+    function parseMul(){ let v=parseUnary(); let op; while(op=consume(/^(\/\/|\*|\/|%)/)){ const r=parseUnary(); v=arith(v,op,r);} return v; }
+    function parseUnary(){ if(consume(/^-/)){ const v=parseUnary(); return {k:'num',v:-v.v,f:v.f}; } return parsePostfix(); }
+    function parsePostfix(){
+      let v=parseAtom();
+      for(;;){ ws();
+        if(s[i]==='['){ i++; const idx=parseOr(); ws(); if(s[i]===']') i++; v=indexInto(v,idx); continue; }
+        if(s[i]==='.'){ i++; const name=consume(/^\w+/); ws(); if(s[i]==='('){ i++; const args=parseArgs(); ws(); if(s[i]===')') i++; v=methodCall(v,name,args);} continue; }
+        break;
+      }
+      return v;
+    }
+    function parseArgs(){ ws(); const args=[]; if(s[i]===')') return args; args.push(parseOr()); while(true){ ws(); if(s[i]===','){ i++; args.push(parseOr()); } else break; } return args; }
+    function unescape(str){ return str.replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\(["'\\])/g,'$1'); }
+    function interpolate(inner){ return inner.replace(/\{([^}]+)\}/g, (_,ex)=> pyStr(evalExpr(ex)) ); }
+    function parseAtom(){
+      ws();
+      if(s[i]==='('){ i++; const v=parseOr(); ws(); if(s[i]===')') i++; return v; }
+      if(s[i]==='['){ i++; const items=parseArgs(); ws(); if(s[i]===']') i++; return {k:'list',v:items}; }
+      let m;
+      const fm=(()=>{ws();const mm=s.slice(i).match(/^f(["'])((?:\\.|(?!\1).)*)\1/); if(mm&&mm.index===0){i+=mm[0].length; return mm;} return null;})();
+      if(fm) return {k:'str', v: interpolate(fm[2])};
+      if(m=consume(/^"((?:\\.|[^"])*)"/)) return {k:'str',v:unescape(m.slice(1,-1))};
+      if(m=consume(/^'((?:\\.|[^'])*)'/)) return {k:'str',v:unescape(m.slice(1,-1))};
+      if(m=consume(/^\d+\.\d+/)) return {k:'num',v:parseFloat(m),f:true};
+      if(m=consume(/^\d+/)) return {k:'num',v:parseInt(m,10),f:false};
+      if(consume(/^True\b/)) return {k:'bool',v:true};
+      if(consume(/^False\b/)) return {k:'bool',v:false};
+      if(consume(/^None\b/)) return {k:'none'};
+      if(m=consume(/^[A-Za-z_]\w*/)){ ws(); if(s[i]==='('){ i++; const args=parseArgs(); ws(); if(s[i]===')') i++; return callFn(m,args); } return getVar(m); }
+      throw new Error('Ada yang salah di dekat: '+s.slice(i,i+12));
+    }
+    return parseOr();
+  }
+  const stmts=[];
+  code.replace(/\r\n/g,'\n').split('\n').forEach(raw=>{
+    const line=raw.replace(/\t/g,'    ');
+    const indent=line.match(/^ */)[0].length;
+    let text=line.slice(indent);
+    let inS=false,inD=false,cut=text.length;
+    for(let j=0;j<text.length;j++){ const c=text[j]; if(c==="'"&&!inD) inS=!inS; else if(c==='"'&&!inS) inD=!inD; else if(c==='#'&&!inS&&!inD){cut=j;break;} }
+    text=text.slice(0,cut).trimEnd();
+    if(text.trim()==='') return;
+    stmts.push({indent, text:text.trim()});
+  });
+  let pc=0;
+  function skipBlock(indent){ while(pc<stmts.length && stmts[pc].indent>=indent) pc++; }
+  function execBlock(indent){
+    while(pc<stmts.length && stmts[pc].indent===indent){
+      const line=stmts[pc].text;
+      if(/^if\s.*:$/.test(line)){
+        const cond=line.slice(3,-1).trim(); pc++;
+        const ci=pc<stmts.length? stmts[pc].indent : indent+4;
+        let taken=false;
+        if(truthy(evalExpr(cond))){ execBlock(ci); taken=true; } else { skipBlock(ci); }
+        while(pc<stmts.length && stmts[pc].indent===indent && /^elif\s.*:$/.test(stmts[pc].text)){
+          const c2=stmts[pc].text.slice(5,-1).trim(); pc++;
+          const ci2=pc<stmts.length? stmts[pc].indent : indent+4;
+          if(!taken && truthy(evalExpr(c2))){ execBlock(ci2); taken=true; } else { skipBlock(ci2); }
+        }
+        if(pc<stmts.length && stmts[pc].indent===indent && stmts[pc].text==='else:'){
+          pc++; const ci3=pc<stmts.length? stmts[pc].indent : indent+4;
+          if(!taken){ execBlock(ci3); } else { skipBlock(ci3); }
+        }
+        continue;
+      }
+      const forM=line.match(/^for\s+(\w+)\s+in\s+(.*):$/);
+      if(forM){
+        const varName=forM[1], iterExpr=forM[2]; pc++;
+        const ci=pc<stmts.length? stmts[pc].indent : indent+4;
+        const bodyStart=pc;
+        let items;
+        const rangeM=iterExpr.match(/^range\((.*)\)$/);
+        if(rangeM){
+          const parts=[]; let depth=0,cur='';
+          for(const ch of rangeM[1]){ if(ch==='('||ch==='[') depth++; if(ch===')'||ch===']') depth--; if(ch===','&&depth===0){parts.push(cur);cur='';} else cur+=ch; }
+          if(cur.trim()!=='') parts.push(cur);
+          const nums=parts.map(p=>evalExpr(p).v);
+          let start=0,end,step=1;
+          if(nums.length===1){ end=nums[0]; } else { start=nums[0]; end=nums[1]; if(nums.length>=3) step=nums[2]; }
+          items=[]; if(step>0){ for(let n=start;n<end;n+=step) items.push({k:'num',v:n,f:false}); } else { for(let n=start;n>end;n+=step) items.push({k:'num',v:n,f:false}); }
+        } else {
+          const listVal=evalExpr(iterExpr);
+          items = listVal.k==='list'? listVal.v : (listVal.k==='str'? listVal.v.split('').map(ch=>({k:'str',v:ch})) : []);
+        }
+        if(items.length===0){ pc=bodyStart; skipBlock(ci); }
+        else { for(const item of items){ scope[varName]=item; pc=bodyStart; execBlock(ci); } }
+        continue;
+      }
+      const asg=line.match(/^([A-Za-z_]\w*)\s*(\+=|-=|=(?!=))\s*(.+)$/);
+      if(asg){
+        const [,name,op,rhsSrc]=asg;
+        const rhsVal=evalExpr(rhsSrc);
+        if(op==='=') scope[name]=rhsVal;
+        else if(op==='+=') scope[name]=arith(scope[name],'+',rhsVal);
+        else if(op==='-=') scope[name]=arith(scope[name],'-',rhsVal);
+        pc++; continue;
+      }
+      evalExpr(line);
+      pc++;
+    }
+  }
+  try{ execBlock(stmts.length? stmts[0].indent : 0); }
+  catch(e){ output.push('Error: '+e.message); }
+  return output;
+}
+
+function pickMissions(baseArr,diffId){
+  return baseArr.map(m=>{
+    const v=m.variants[diffId];
+    return {pos:m.pos,lesson:m.lesson,code:m.code,task:v.task,hint:v.hint,note:v.note,checks:v.checks,custom:v.custom,quiz:v.quiz};
+  });
+}
+
+const CATEGORIES=[
+  {id:'dasar',name:'Level Dasar',missions:missionsL1},
+  {id:'lanjutan',name:'Level Lanjutan',missions:missionsL2}
+];
+const DIFFICULTIES=[
+  {id:'easy',name:'Easy',hasEnemy:false,timeLimit:0},
+  {id:'medium',name:'Medium',hasEnemy:false,timeLimit:150},
+  {id:'hard',name:'Hard',hasEnemy:true,timeLimit:90}
+];
+const LEVELS=[];
+CATEGORIES.forEach(cat=>{
+  DIFFICULTIES.forEach(diff=>{
+    LEVELS.push({
+      id:cat.id+'-'+diff.id, name:cat.name+' \u2013 '+diff.name,
+      hasEnemy:diff.hasEnemy, timeLimit:diff.timeLimit,
+      enemyStart:diff.hasEnemy?[4,11]:null, missions:pickMissions(cat.missions,diff.id)
+    });
+  });
+});
+
+
+function isWall(r,c){
+  if(r<=0||r>=ROWS-1||c<=0||c>=COLS-1) return true;
+  return PILLARS.some(p=>p[0]===r&&p[1]===c);
+}
+function missionAt(r,c){ return activeLevel.missions.findIndex(m=>m.pos[0]===r&&m.pos[1]===c); }
+
+let levelIdx=0, activeLevel=LEVELS[0], st, encounterOpen=false, enemyTimer=null, countTimer=null;
+const cellEls={};
+
+function defaultState(level){
+  return {player:{r:START[0],c:START[1]},dir:'right',eaten:{},done:{},
+    enemy:level.enemyStart?{r:level.enemyStart[0],c:level.enemyStart[1]}:null,
+    timeLeft:level.timeLimit};
+}
+function loadState(level){
+  try{
+    const raw=localStorage.getItem('pyquest_v3_'+level.id);
+    if(raw){ const s=JSON.parse(raw); if(s&&s.player) return s; }
+  }catch(e){}
+  return defaultState(level);
+}
+function save(){ try{ localStorage.setItem('pyquest_v3_'+activeLevel.id, JSON.stringify(st)); }catch(e){} }
+function doneCount(){ return Object.keys(st.done).length; }
+
+function buildLevelList(){
+  showCategoryStep();
+}
+function badge(letter,color){ return '<span class="badge3d" style="--bc:'+color+'">'+letter+'</span>'; }
+function tilt3D(el){
+  el.style.transition='transform .12s ease';
+  el.addEventListener('pointermove',e=>{
+    const r=el.getBoundingClientRect();
+    const px=(e.clientX-r.left)/r.width-0.5, py=(e.clientY-r.top)/r.height-0.5;
+    el.style.transform='perspective(500px) rotateX('+(-py*16).toFixed(1)+'deg) rotateY('+(px*16).toFixed(1)+'deg) translateZ(6px)';
+  });
+  el.addEventListener('pointerleave',()=>{ el.style.transform=''; });
+  el.addEventListener('pointerdown',()=>{ el.style.transform='perspective(500px) scale(.93) translateZ(-8px)'; });
+  el.addEventListener('pointerup',()=>{ el.style.transform=''; });
+}
+function showCategoryStep(){
+  document.getElementById('startTitle').textContent='Pilih level buat mulai petualangan!';
+  const list=document.getElementById('levelList');
+  list.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const b=document.createElement('button');
+    b.className='levelBtn';
+    const letter=cat.id==='dasar'?'D':'L';
+    const color=cat.id==='dasar'?'var(--mint)':'var(--ghost)';
+    b.innerHTML=badge(letter,color)+'<span>'+cat.name+'</span>';
+    b.onclick=()=>showDifficultyStep(cat);
+    list.appendChild(b); tilt3D(b);
+  });
+}
+function showDifficultyStep(cat){
+  document.getElementById('startTitle').textContent=cat.name+' - pilih tingkat kesulitan';
+  const list=document.getElementById('levelList');
+  list.innerHTML='';
+  const meta={easy:{l:'E',c:'var(--mint)'},medium:{l:'M',c:'var(--candy2)'},hard:{l:'H',c:'var(--coral)'}};
+  DIFFICULTIES.forEach(diff=>{
+    const b=document.createElement('button');
+    b.className='levelBtn';
+    let extra=diff.hasEnemy?' (waktu + penjaga)':(diff.timeLimit>0?' (waktu)':'');
+    const m=meta[diff.id]||{l:'?',c:'var(--wall2)'};
+    b.innerHTML=badge(m.l,m.c)+'<span>'+diff.name+extra+'</span>';
+    const idx=LEVELS.findIndex(lv=>lv.id===cat.id+'-'+diff.id);
+    b.onclick=()=>startLevel(idx);
+    list.appendChild(b); tilt3D(b);
+  });
+  const back=document.createElement('button');
+  back.className='levelBtn back';
+  back.textContent='Kembali';
+  back.onclick=showCategoryStep;
+  list.appendChild(back);
+}
+
+function startLevel(idx){
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('game').style.display='block';
+  document.getElementById('menuBtn').style.display='inline-block';
+  document.getElementById('hud').style.display='flex';
+  switchLevel(idx);
+}
+
+function backToMenu(){
+  clearInterval(enemyTimer); clearInterval(countTimer);
+  encounterOpen=false; document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('game').style.display='none';
+  document.getElementById('menuBtn').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('startScreen').style.display='flex';
+  showCategoryStep();
+}
+
+function switchLevel(idx){
+  clearInterval(enemyTimer); clearInterval(countTimer);
+  levelIdx=idx; activeLevel=LEVELS[idx]; st=loadState(activeLevel);
+  encounterOpen=false; document.getElementById('overlay').classList.add('hidden');
+  buildMaze(); updateScore(); updateTimerDisplay();
+  if(activeLevel.hasEnemy) enemyTimer=setInterval(tickEnemy,750);
+  if(activeLevel.timeLimit>0) countTimer=setInterval(tickTimer,1000);
+}
+
+function buildMaze(){
+  const maze=document.getElementById('maze');
+  maze.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const cell=document.createElement('div');
+      const key=r+','+c;
+      if(isWall(r,c)){ cell.className='cell wall'; }
+      else{
+        const mi=missionAt(r,c);
+        if(mi>=0){
+          cell.className='cell mission'+(st.done[mi]?' cleared':'');
+          const mk=document.createElement('div'); mk.className='marker'; cell.appendChild(mk);
+        } else {
+          const isStart=(r===START[0]&&c===START[1]);
+          const eaten=!!st.eaten[key]||isStart;
+          cell.className='cell path'+(eaten?'':' dot');
+        }
+      }
+      maze.appendChild(cell);
+      cellEls[key]=cell;
+    }
+  }
+  const player=document.createElement('div');
+  player.className='player'; player.id='player';
+  player.innerHTML='<div class="pacBody"></div>';
+  maze.appendChild(player);
+  if(activeLevel.hasEnemy){
+    const enemy=document.createElement('div');
+    enemy.className='enemy'; enemy.id='enemy';
+    enemy.innerHTML='<div class="ghostBody"><span class="eye l"></span><span class="eye r"></span></div>';
+    maze.appendChild(enemy);
+  }
+  updatePlayerEl(); updateEnemyEl();
+}
+
+function posStyle(el,r,c){
+  el.style.left=(c+0.5)/COLS*100+'%';
+  el.style.top=(r+0.5)/ROWS*100+'%';
+}
+function updatePlayerEl(){
+  const p=document.getElementById('player');
+  posStyle(p,st.player.r,st.player.c);
+  const deg={right:0,left:180,up:-90,down:90}[st.dir]||0;
+  p.style.transform='translate(-50%,-50%) rotate('+deg+'deg)';
+}
+function updateEnemyEl(){
+  if(!activeLevel.hasEnemy) return;
+  const e=document.getElementById('enemy');
+  if(!e||!st.enemy) return;
+  posStyle(e,st.enemy.r,st.enemy.c);
+  e.style.transform='translate(-50%,-50%)';
+}
+
+let actx=null;
+function beep(freq,dur,type){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(.08,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+dur/1000);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime+dur/1000);
+  }catch(e){}
+}
+function bumpEl(el){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+function updateScore(){
+  const el=document.getElementById('score');
+  el.textContent=doneCount()+'/'+activeLevel.missions.length;
+  bumpEl(el);
+}
+function updateTimerDisplay(){
+  const t=document.getElementById('timer');
+  if(!activeLevel.timeLimit){ t.style.display='none'; return; }
+  t.style.display='inline-block';
+  const s=Math.max(0,st.timeLeft);
+  t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+function showFlash(text){
+  const f=document.getElementById('flash');
+  f.textContent=text; f.classList.add('show');
+  setTimeout(()=>f.classList.remove('show'),1400);
+}
+
+function move(dr,dc){
+  if(encounterOpen) return;
+  const nr=st.player.r+dr, nc=st.player.c+dc;
+  if(isWall(nr,nc)) return;
+  if(dc===1) st.dir='right'; else if(dc===-1) st.dir='left';
+  else if(dr===-1) st.dir='up'; else if(dr===1) st.dir='down';
+  st.player.r=nr; st.player.c=nc;
+  const key=nr+','+nc;
+  if(!st.eaten[key] && missionAt(nr,nc)<0){
+    st.eaten[key]=true;
+    const el=cellEls[key];
+    if(el) el.classList.remove('dot');
+  }
+  updatePlayerEl();
+  save();
+  const mi=missionAt(nr,nc);
+  if(mi>=0){ setTimeout(()=>openEncounter(mi),120); }
+  else if(activeLevel.hasEnemy && st.enemy && st.enemy.r===nr && st.enemy.c===nc){ handleCatch(); }
+}
+
+function bfsNextStep(from,to){
+  if(from.r===to.r&&from.c===to.c) return from;
+  const key=(r,c)=>r+','+c;
+  const visited=new Set([key(from.r,from.c)]);
+  const queue=[{r:from.r,c:from.c,first:null}];
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+  while(queue.length){
+    const cur=queue.shift();
+    for(const d of dirs){
+      const nr=cur.r+d[0],nc=cur.c+d[1];
+      if(isWall(nr,nc)) continue;
+      const k=key(nr,nc);
+      if(visited.has(k)) continue;
+      visited.add(k);
+      const first=cur.first||{r:nr,c:nc};
+      if(nr===to.r&&nc===to.c) return first;
+      queue.push({r:nr,c:nc,first:first});
+    }
+  }
+  return from;
+}
+function tickEnemy(){
+  if(!activeLevel.hasEnemy||encounterOpen||!st.enemy) return;
+  const next=bfsNextStep(st.enemy,st.player);
+  st.enemy={r:next.r,c:next.c};
+  updateEnemyEl(); save();
+  if(st.enemy.r===st.player.r&&st.enemy.c===st.player.c){ handleCatch(); }
+}
+function tickTimer(){
+  if(!activeLevel.timeLimit||encounterOpen) return;
+  st.timeLeft--;
+  if(st.timeLeft<=0){ handleTimeout(); }
+  updateTimerDisplay(); save();
+}
+function handleCatch(){
+  st.player.r=START[0]; st.player.c=START[1];
+  st.timeLeft=Math.max(15,st.timeLeft-15);
+  updatePlayerEl(); updateTimerDisplay(); save();
+  showFlash('Ketangkep penjaga! Balik ke titik awal ya.');
+}
+function handleTimeout(){
+  st.player.r=START[0]; st.player.c=START[1];
+  st.timeLeft=activeLevel.timeLimit;
+  updatePlayerEl(); save();
+  showFlash('Waktu habis! Coba lagi dari titik awal.');
+}
+
+function openEncounter(mi){
+  encounterOpen=true;
+  const m=activeLevel.missions[mi];
+  const overlay=document.getElementById('overlay');
+  const panel=document.getElementById('panel');
+  const skipQuiz=!m.quiz||!!st.done[mi];
+  panel.innerHTML=`
+    <button class="closeX" id="closeX">&times;</button>
+    <div class="lesson">${m.lesson}</div>
+    <pre>${m.code}</pre>
+    ${m.quiz?`<div class="quizBox" id="quizBox" style="${skipQuiz?'display:none':''}">
+      <div class="task">Kuis kilat: ${m.quiz.q}</div>
+      <div class="quizOpts" id="quizOpts"></div>
+      <div class="quizMsg" id="quizMsg"></div>
+    </div>`:''}
+    <div id="taskBox" style="${skipQuiz?'':'display:none'}">
+      ${m.note?`<div class="noteBox"><b>Materi baru:</b> ${m.note}</div>`:''}
+      <div class="task">${m.task}</div>
+      ${m.hint?`<button class="hintBtn" id="hintBtn" type="button">Lihat hint</button>
+      <div class="hintBox hidden" id="hintBox">${m.hint}</div>`:''}
+      <textarea id="code" spellcheck="false" placeholder="tulis kodemu di sini"></textarea>
+      <pre class="outputBox hidden" id="outputBox"></pre>
+      <div class="row">
+        <button class="run" id="runBtn">Coba</button>
+        <div class="status" id="status">${st.done[mi]?'sudah selesai':''}</div>
+      </div>
+    </div>`;
+  overlay.classList.remove('hidden');
+  document.getElementById('closeX').onclick=closeEncounter;
+  const hintBtn=document.getElementById('hintBtn');
+  if(hintBtn){
+    hintBtn.onclick=()=>{
+      const box=document.getElementById('hintBox');
+      const open=box.classList.toggle('hidden');
+      hintBtn.textContent=open?'Lihat hint':'Tutup hint';
+    };
+  }
+  if(m.quiz&&!skipQuiz){
+    const opts=document.getElementById('quizOpts');
+    m.quiz.options.forEach((opt,oi)=>{
+      const b=document.createElement('button');
+      b.textContent=opt;
+      b.onclick=()=>{
+        const msg=document.getElementById('quizMsg');
+        if(oi===m.quiz.answer){
+          b.classList.add('correct'); beep(880,150,'sine');
+          msg.textContent='Benar! Lanjut ke misi kodenya.'; msg.className='quizMsg ok';
+          Array.from(opts.children).forEach(c=>c.disabled=true);
+          setTimeout(()=>{
+            document.getElementById('quizBox').style.display='none';
+            document.getElementById('taskBox').style.display='block';
+          },500);
+        } else {
+          b.classList.add('wrong'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+          beep(180,150,'square');
+          msg.textContent='Belum tepat, coba lagi.'; msg.className='quizMsg bad';
+        }
+      };
+      opts.appendChild(b);
+    });
+  }
+  const runBtn=document.getElementById('runBtn');
+  if(runBtn){ tilt3D(runBtn);
+  runBtn.onclick=()=>{
+    const val=document.getElementById('code').value;
+    const outBox=document.getElementById('outputBox');
+    const status=document.getElementById('status');
+    const lines=runPy(val);
+    outBox.textContent=''; outBox.classList.remove('hidden');
+    status.textContent=''; status.className='status';
+    runBtn.disabled=true;
+    let idx=0;
+    function revealNext(){
+      if(idx<lines.length){
+        outBox.textContent += (idx>0?'\n':'')+lines[idx];
+        outBox.scrollTop=outBox.scrollHeight;
+        idx++; beep(520,40,'sine');
+        setTimeout(revealNext,480);
+      } else {
+        if(lines.length===0) outBox.textContent='(tidak ada output)';
+        finishCheck();
+      }
+    }
+    function finishCheck(){
+    runBtn.disabled=false;
+    const ok=(!m.checks||m.checks.every(re=>re.test(val)))&&(!m.custom||m.custom(val));
+    if(ok){
+      status.textContent='yeay, benar!'; status.className='status ok'; beep(880,180,'sine');
+      const isNew=!st.done[mi];
+      st.done[mi]=true; save(); updateScore();
+      const cellEl=cellEls[m.pos[0]+','+m.pos[1]];
+      if(cellEl) cellEl.classList.add('cleared');
+      if(isNew){
+        setTimeout(()=>{ closeEncounter(); if(doneCount()===activeLevel.missions.length) showFinale(); },700);
+      }
+    } else {
+      status.textContent='belum tepat, coba lagi'; status.className='status bad'; beep(180,150,'square');
+      status.classList.remove('shake'); void status.offsetWidth; status.classList.add('shake');
+    }
+    }
+    setTimeout(revealNext,150);
+  };
+  }
+}
+function closeEncounter(){
+  encounterOpen=false;
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+function launchConfetti(){
+  const colors=['#FF8FAE','#FFD166','#4FC9A5','#8A7CFF','#FF7A85'];
+  for(let i=0;i<28;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.6+Math.random()*1.2)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),3000);
+  }
+}
+function showFinale(){
+  encounterOpen=true;
+  const overlay=document.getElementById('overlay');
+  const panel=document.getElementById('panel');
+  panel.innerHTML=`<div class="finale">
+    <div class="big">Semua misi selesai!</div>
+    <div class="sc">${activeLevel.missions.length} / ${activeLevel.missions.length}</div>
+    <button id="resetBtn">Main lagi</button>
+  </div>`;
+  overlay.classList.remove('hidden');
+  launchConfetti();
+  beep(660,120,'sine'); setTimeout(()=>beep(880,120,'sine'),140); setTimeout(()=>beep(1100,220,'sine'),280);
+  document.getElementById('resetBtn').onclick=()=>{
+    st=defaultState(activeLevel); save(); buildMaze(); updateScore(); updateTimerDisplay();
+    encounterOpen=false; document.getElementById('overlay').classList.add('hidden');
+  };
+}
+
+window.addEventListener('keydown',e=>{
+  const tag=document.activeElement&&document.activeElement.tagName;
+  if(tag==='TEXTAREA'||tag==='INPUT') return;
+  const map={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1],
+    w:[-1,0],s:[1,0],a:[0,-1],d:[0,1]};
+  if(map[e.key]){ e.preventDefault(); move(map[e.key][0],map[e.key][1]); }
+});
+document.querySelectorAll('.dpad button').forEach(b=>{
+  b.addEventListener('click',()=>move(+b.dataset.dr,+b.dataset.dc));
+  tilt3D(b);
+});
+
+const pacHero=document.getElementById('pacHero');
+if(pacHero){
+  tilt3D(pacHero);
+  pacHero.addEventListener('click',()=>{ beep(880,90,'sine'); setTimeout(()=>beep(1046,120,'sine'),90); });
+}
+
+document.getElementById('menuBtn').addEventListener('click',backToMenu);
+buildLevelList();
+</script>
+</body>
+</html>
