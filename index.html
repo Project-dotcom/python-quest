@@ -31,16 +31,12 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .startCard{max-width:420px;width:100%;text-align:center;}
 .startTitle{font-family:var(--font-cute);font-weight:700;font-size:17px;color:var(--pink-dark);margin-bottom:26px;
   background:var(--bg);display:inline-block;padding:2px 10px;}
-.levelList{position:relative;display:flex;flex-direction:column;gap:22px;perspective:600px;padding:6px 4px 4px;}
-.levelList::before{content:'';position:absolute;left:50%;top:4px;bottom:4px;border-left:4px dotted var(--pink);
-  transform:translateX(-50%);z-index:0;}
+.levelList{position:relative;display:flex;flex-direction:column;gap:16px;perspective:600px;padding:6px 4px 4px;}
 .levelBtn{position:relative;z-index:1;font-family:var(--font-cute);font-weight:700;font-size:14px;border:none;cursor:pointer;
-  padding:13px 18px;max-width:80%;width:fit-content;background:var(--pink);color:#fff;box-shadow:0 5px 0 var(--pink-dark);
+  padding:13px 18px;width:100%;background:var(--pink);color:#fff;box-shadow:0 5px 0 var(--pink-dark);
   display:flex;align-items:center;gap:10px;text-align:left;transform-style:preserve-3d;will-change:transform;
-  border-radius:26px 26px 26px 6px;}
-.levelBtn:nth-of-type(odd){align-self:flex-start;border-radius:26px 26px 6px 26px;}
-.levelBtn:nth-of-type(even){align-self:flex-end;border-radius:26px 26px 26px 6px;}
-.levelBtn.back{align-self:center;background:#fff;color:var(--muted);box-shadow:0 4px 0 var(--wall2);
+  border-radius:18px;}
+.levelBtn.back{background:#fff;color:var(--muted);box-shadow:0 4px 0 var(--wall2);
   border-radius:999px;margin-top:6px;}
 .badge3d{width:28px;height:28px;flex:0 0 auto;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
   font-family:var(--font-cute);font-weight:800;font-size:12.5px;color:#fff;
@@ -60,9 +56,9 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 
 .maze{position:relative;display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(9,1fr);
   aspect-ratio:13/9;background:var(--floor);border-radius:22px;border:3px solid var(--wall2);overflow:hidden;
-  gap:2px;box-shadow:0 8px 0 var(--wall2),0 10px 20px rgba(75,56,104,.15);}
+  gap:0;box-shadow:0 8px 0 var(--wall2),0 10px 20px rgba(75,56,104,.15);}
 .cell{position:relative;}
-.cell.wall{background:var(--wall);border-radius:7px;}
+.cell.wall{background:var(--wall);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);}
 .cell.path.dot::before{content:'';position:absolute;top:50%;left:50%;width:18%;height:18%;min-width:3px;min-height:3px;
   background:var(--dot);border-radius:50%;transform:translate(-50%,-50%);}
 .cell.mission .marker{position:absolute;top:20%;left:20%;width:60%;height:60%;border-radius:38%;
@@ -167,7 +163,7 @@ button.run:disabled{opacity:.55;cursor:default;}
     <div class="logo">Petualangan Python</div>
     <div class="hud" id="hud" style="display:none">
       <button class="menuBtn" id="menuBtn" style="display:none">Ganti Level</button>
-      <div class="timer" id="timer">2:00</div><div class="score" id="score">0/7</div>
+      <div class="timer" id="timer">2:00</div><div class="score" id="score">0/7</div><div class="score" id="points">0 poin</div>
     </div>
   </header>
   <div class="startScreen" id="startScreen">
@@ -645,14 +641,14 @@ let levelIdx=0, activeLevel=LEVELS[0], st, encounterOpen=false, enemyTimer=null,
 const cellEls={};
 
 function defaultState(level){
-  return {player:{r:START[0],c:START[1]},dir:'right',eaten:{},done:{},
+  return {player:{r:START[0],c:START[1]},dir:'right',eaten:{},done:{},points:0,
     enemy:level.enemyStart?{r:level.enemyStart[0],c:level.enemyStart[1]}:null,
     timeLeft:level.timeLimit};
 }
 function loadState(level){
   try{
     const raw=localStorage.getItem('pyquest_v3_'+level.id);
-    if(raw){ const s=JSON.parse(raw); if(s&&s.player) return s; }
+    if(raw){ const s=JSON.parse(raw); if(s&&s.player){ if(typeof s.points!=='number') s.points=0; return s; } }
   }catch(e){}
   return defaultState(level);
 }
@@ -732,7 +728,7 @@ function switchLevel(idx){
   clearInterval(enemyTimer); clearInterval(countTimer);
   levelIdx=idx; activeLevel=LEVELS[idx]; st=loadState(activeLevel);
   encounterOpen=false; document.getElementById('overlay').classList.add('hidden');
-  buildMaze(); updateScore(); updateTimerDisplay();
+  buildMaze(); updateScore(); updateTimerDisplay(); updatePoints();
   if(activeLevel.hasEnemy) enemyTimer=setInterval(tickEnemy,750);
   if(activeLevel.timeLimit>0) countTimer=setInterval(tickTimer,1000);
 }
@@ -809,6 +805,12 @@ function updateScore(){
   el.textContent=doneCount()+'/'+activeLevel.missions.length;
   bumpEl(el);
 }
+function updatePoints(){
+  const el=document.getElementById('points');
+  if(!el) return;
+  el.textContent=(st.points||0)+' poin';
+  bumpEl(el);
+}
 function updateTimerDisplay(){
   const t=document.getElementById('timer');
   if(!activeLevel.timeLimit){ t.style.display='none'; return; }
@@ -832,6 +834,8 @@ function move(dr,dc){
   const key=nr+','+nc;
   if(!st.eaten[key] && missionAt(nr,nc)<0){
     st.eaten[key]=true;
+    st.points=(st.points||0)+10;
+    updatePoints();
     const el=cellEls[key];
     if(el) el.classList.remove('dot');
   }
@@ -978,7 +982,9 @@ function openEncounter(mi){
     if(ok){
       status.textContent='yeay, benar!'; status.className='status ok'; beep(880,180,'sine');
       const isNew=!st.done[mi];
-      st.done[mi]=true; save(); updateScore();
+      st.done[mi]=true;
+      if(isNew){ st.points=(st.points||0)+50; updatePoints(); }
+      save(); updateScore();
       const cellEl=cellEls[m.pos[0]+','+m.pos[1]];
       if(cellEl) cellEl.classList.add('cleared');
       if(isNew){
@@ -1016,14 +1022,14 @@ function showFinale(){
   const panel=document.getElementById('panel');
   panel.innerHTML=`<div class="finale">
     <div class="big">Semua misi selesai!</div>
-    <div class="sc">${activeLevel.missions.length} / ${activeLevel.missions.length}</div>
+    <div class="sc">${activeLevel.missions.length} / ${activeLevel.missions.length} misi &middot; ${st.points||0} poin</div>
     <button id="resetBtn">Main lagi</button>
   </div>`;
   overlay.classList.remove('hidden');
   launchConfetti();
   beep(660,120,'sine'); setTimeout(()=>beep(880,120,'sine'),140); setTimeout(()=>beep(1100,220,'sine'),280);
   document.getElementById('resetBtn').onclick=()=>{
-    st=defaultState(activeLevel); save(); buildMaze(); updateScore(); updateTimerDisplay();
+    st=defaultState(activeLevel); save(); buildMaze(); updateScore(); updateTimerDisplay(); updatePoints();
     encounterOpen=false; document.getElementById('overlay').classList.add('hidden');
   };
 }
