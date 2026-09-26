@@ -165,6 +165,7 @@ button.run:disabled{opacity:.55;cursor:default;}
       <button class="menuBtn" id="menuBtn" style="display:none">Ganti Level</button>
       <div class="timer" id="timer">2:00</div><div class="score" id="score">0/7</div><div class="score" id="points">0 poin</div>
     </div>
+    <button class="menuBtn" id="musicBtn" title="Musik"></button>
   </header>
   <div class="startScreen" id="startScreen">
     <div class="startCard">
@@ -707,6 +708,7 @@ function showDifficultyStep(cat){
 }
 
 function startLevel(idx){
+  attemptStartMusic();
   document.getElementById('startScreen').style.display='none';
   document.getElementById('game').style.display='block';
   document.getElementById('menuBtn').style.display='inline-block';
@@ -788,6 +790,47 @@ function updateEnemyEl(){
 }
 
 let actx=null;
+let bgMusicOn=true;
+try{ const pref=localStorage.getItem('pyquest_music'); if(pref!==null) bgMusicOn=(pref==='1'); }catch(e){}
+let bgMusicTimer=null, bgStep=0;
+const BG_MELODY=[523.25,0,659.25,0,783.99,659.25,523.25,0, 587.33,0,698.46,0,880,698.46,587.33,0];
+const BG_BASS=[130.81,130.81,164.81,164.81,196.00,196.00,164.81,164.81,146.83,146.83,174.61,174.61,196.00,196.00,174.61,174.61];
+function bgNote(freq,dur,type,vol){
+  if(!freq) return;
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type=type||'triangle'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+dur/1000);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime+dur/1000);
+  }catch(e){}
+}
+function bgStepPlay(){
+  bgNote(BG_MELODY[bgStep%BG_MELODY.length],210,'square',.03);
+  bgNote(BG_BASS[bgStep%BG_BASS.length],230,'triangle',.045);
+  bgStep++;
+}
+function startBgMusic(){
+  if(bgMusicTimer) return;
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){}
+  bgMusicTimer=setInterval(bgStepPlay,230);
+}
+function stopBgMusic(){ clearInterval(bgMusicTimer); bgMusicTimer=null; }
+function attemptStartMusic(){ if(bgMusicOn) startBgMusic(); }
+const ICON_SOUND_ON=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;margin-right:5px"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6a9 9 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".6"/></svg>`;
+const ICON_SOUND_OFF=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;margin-right:5px"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+function updateMusicBtn(){
+  const b=document.getElementById('musicBtn');
+  if(b) b.innerHTML=(bgMusicOn?ICON_SOUND_ON+'Musik':ICON_SOUND_OFF+'Musik');
+}
+function toggleMusic(){
+  bgMusicOn=!bgMusicOn;
+  try{ localStorage.setItem('pyquest_music', bgMusicOn?'1':'0'); }catch(e){}
+  updateMusicBtn();
+  if(bgMusicOn) attemptStartMusic(); else stopBgMusic();
+}
 function beep(freq,dur,type){
   try{
     actx=actx||new (window.AudioContext||window.webkitAudioContext)();
@@ -932,7 +975,10 @@ function openEncounter(mi){
   }
   if(m.quiz&&!skipQuiz){
     const opts=document.getElementById('quizOpts');
-    m.quiz.options.forEach((opt,oi)=>{
+    const order=m.quiz.options.map((_,idx)=>idx);
+    for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+    order.forEach(oi=>{
+      const opt=m.quiz.options[oi];
       const b=document.createElement('button');
       b.textContent=opt;
       b.onclick=()=>{
@@ -1049,10 +1095,12 @@ document.querySelectorAll('.dpad button').forEach(b=>{
 const pacHero=document.getElementById('pacHero');
 if(pacHero){
   tilt3D(pacHero);
-  pacHero.addEventListener('click',()=>{ beep(880,90,'sine'); setTimeout(()=>beep(1046,120,'sine'),90); });
+  pacHero.addEventListener('click',()=>{ attemptStartMusic(); beep(880,90,'sine'); setTimeout(()=>beep(1046,120,'sine'),90); });
 }
 
 document.getElementById('menuBtn').addEventListener('click',backToMenu);
+document.getElementById('musicBtn').addEventListener('click',toggleMusic);
+updateMusicBtn();
 buildLevelList();
 </script>
 </body>
